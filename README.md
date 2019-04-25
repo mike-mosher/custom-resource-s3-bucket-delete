@@ -9,7 +9,10 @@ If you have a CloudFormation template that creates an S3 bucket, you might face 
 
 - `Important: You can only delete empty buckets. Deletion fails for buckets that have contents`
 
-This CloudFormation template defines a [Lambda-backed Custom Resource](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-custom-resources-lambda.html) that can be used to fix this.  The Custom Resource will do nothing but return a `success` message to CloudFormation during a create-stack and update-stack operation.  However, during the delete-stack operation, it will programatically empty the S3 bucket.  Also, since you will need to pass the name of the S3 bucket to the Custom Resource using the [Fn::Ref](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/intrinsic-function-reference-ref.html) intrinsic function, this creates an implicit dependency on these two resources that ensures tha the Custom Resource will be deleted first (where it empties the bucket) an the S3 bucket is deleted second.  Because of this, we can be sure that the S3 bucket will be empty when CloudFormation starts to delete the resource.
+This CloudFormation template defines a [Lambda-backed Custom Resource](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-custom-resources-lambda.html) that can be used to fix this.  The Custom Resource will do nothing but return a `success` message to CloudFormation during a create-stack and update-stack operation.  However, during the delete-stack operation, it will programatically empty the S3 bucket.  
+
+
+Also, since you will need to pass the name of the S3 bucket to the Custom Resource using the [Fn::Ref](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/intrinsic-function-reference-ref.html) intrinsic function, this creates an implicit dependency on these two resources that ensures tha the Custom Resource will be deleted first (where it empties the bucket) an the S3 bucket is deleted second.  Because of this, we can be sure that the S3 bucket will be empty when CloudFormation starts to delete the resource.
 
 
 ## Use
