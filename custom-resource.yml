@@ -1,0 +1,84 @@
+Resources:
+
+    CustomResourceLambdaExecutionRole:
+        Type: 'AWS::IAM::Role'
+        Properties:
+            AssumeRolePolicyDocument:
+                Version: 2012-10-17
+                Statement:
+                    - Effect: Allow
+                      Principal:
+                          Service: lambda.amazonaws.com
+                      Action:
+                          - 'sts:AssumeRole'
+            Policies:
+                - PolicyName: LoggingPolicy
+                  PolicyDocument:
+                      Version: 2012-10-17
+                      Statement:
+                          - Effect: Allow
+                            Action:
+                                - logs:CreateLogGroup
+                                - logs:CreateLogStream
+                                - logs:PutLogEvents
+                            Resource: '*'
+                - PolicyName: S3Policy
+                  PolicyDocument:
+                      Version: 2012-10-17
+                      Statement:
+                          - Effect: Allow
+                            Action:
+                                - s3:List*
+                                - s3:DeleteObject
+                            Resource: '*'
+
+    CustomResourceLambdaFunction:
+        Type: 'AWS::Lambda::Function'
+        Properties:
+            Code:
+                ZipFile: |
+                    import cfnresponse
+                    import boto3
+
+                    def handler(event, context):
+                        print(event)
+                        print('boto version ' + boto3.__version__)
+
+                        # Globals
+                        responseData = {}
+                        ResponseStatus = cfnresponse.SUCCESS
+                        s3bucketName = event['ResourceProperties']['s3bucketName']
+
+                        if event['RequestType'] == 'Create':
+                            responseData['Message'] = "Resource creation successful!"
+
+                        elif event['RequestType'] == 'Update':
+                            responseData['Message'] = "Resource update successful!"
+
+                        elif event['RequestType'] == 'Delete':
+                            # Need to empty the S3 bucket before it is deleted
+                            s3 = boto3.resource('s3')
+                            bucket = s3.Bucket(s3bucketName)
+                            bucket.objects.all().delete()
+
+                            responseData['Message'] = "Resource deletion successful!"
+
+                        cfnresponse.send(event, context, ResponseStatus, responseData)
+
+            Handler: index.handler
+            Runtime: python3.7
+            Role: !GetAtt CustomResourceLambdaExecutionRole.Arn
+
+    CustomResource:
+        Type: Custom::CustomResource
+        Properties:
+            ServiceToken: !GetAtt CustomResourceLambdaFunction.Arn
+            s3bucketName: !Ref S3Bucket
+        DependsOn: S3Bucket
+
+    S3Bucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        AccessControl: Private
+        BucketName: custom-resource-s3-bucket
+
